@@ -4,6 +4,27 @@ from typing import Dict, Tuple
 import pandas as pd
 
 
+def _normalize_column_name(name: str) -> str:
+    if not isinstance(name, str):
+        return name
+    normalized = name.replace("\r\n", "\n").replace("\r", "\n").strip()
+    while "\n\n" in normalized:
+        normalized = normalized.replace("\n\n", "\n")
+    lines = [line.strip() for line in normalized.split("\n")]
+    lines = [line for line in lines if line]
+    # If a line starting with an option marker exists, drop any preamble before it.
+    option_idx = next((idx for idx, line in enumerate(lines) if line.startswith(("A)", "B)"))), None)
+    if option_idx is not None:
+        lines = lines[option_idx:]
+    normalized = "\n".join(lines)
+    return normalized
+
+
+def _normalize_headers(df: pd.DataFrame) -> pd.DataFrame:
+    df.columns = [_normalize_column_name(col) for col in df.columns]
+    return df
+
+
 def _read_csv(path: Path) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"CSV file not found: {path}")
@@ -62,6 +83,11 @@ def load_tables(config: Dict) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, int
             raise ValueError("erasmus_sheet and esn_sheet must be provided for XLSX input")
         erasmus_df = pd.read_excel(workbook, sheet_name=erasmus_sheet)
         esn_df = pd.read_excel(workbook, sheet_name=esn_sheet)
+
+    esn_df = _normalize_headers(esn_df)
+    erasmus_df = _normalize_headers(erasmus_df)
+
+    buddy_column = _normalize_column_name(buddy_column)
 
     stats = {
         "esn_loaded": len(esn_df),

@@ -30,3 +30,43 @@ def test_ingest_filters_buddy_interest_erasmus_only():
     assert len(erasmus_df) == len(expected_filtered)
     assert stats["erasmus_after_filter"] == len(expected_filtered)
     assert set(erasmus_df["Are you interested in getting a buddy?"].unique()) == {"Yes"}
+
+
+def test_ingest_normalizes_multiline_headers(tmp_path):
+    data_dir = tmp_path
+    buddy_column = "Are you interested in getting a buddy?"
+    multiline_header_raw = "Intro line\r\nA) Mountains\r\nB) Sea  "
+    esn_header_raw = "Volunteer Name\r"
+
+    erasmus_csv = (
+        f'"{buddy_column}";"{multiline_header_raw}"\r\n'
+        '"Yes";"Hiking"\r\n'
+        '"No";"Swimming"\r\n'
+    )
+    esn_csv = (
+        f'"{esn_header_raw}";"City"\r\n'
+        '"Alex";"ZA"\r\n'
+    )
+
+    (data_dir / "Erasmus.csv").write_text(erasmus_csv, encoding="utf-8")
+    (data_dir / "ESN.csv").write_text(esn_csv, encoding="utf-8")
+
+    config = {
+        "input": {
+            "format": "csv",
+            "file_path": str(data_dir),
+            "esn_csv": "ESN.csv",
+            "erasmus_csv": "Erasmus.csv",
+            "buddy_interest_column": buddy_column,
+            "buddy_interest_value": "Yes",
+        }
+    }
+
+    erasmus_df, esn_df, _ = ingest.load_tables(config)
+
+    normalized_multiline = "A) Mountains\nB) Sea"
+    assert normalized_multiline in erasmus_df.columns
+    assert "Volunteer Name" in esn_df.columns
+    assert all("\r" not in col for col in erasmus_df.columns)
+    assert len(erasmus_df) == 1
+    assert set(erasmus_df[buddy_column]) == {"Yes"}
