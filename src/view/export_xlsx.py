@@ -35,7 +35,7 @@ def _candidate_rows(ranking: ESNRanking, erasmus_df: pd.DataFrame) -> pd.DataFra
             "Rank": rank_num,
             "Student Name": student.get("Name", ""),
             "Student Surname": student.get("Surname", ""),
-            "Distance (Hamming)": candidate.distance,
+            "Number of different answers": candidate.distance,
         }
         rows.append(row)
     return pd.DataFrame(rows)
