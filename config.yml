@@ -1,0 +1,56 @@
+# config.yml — ESN UNIZA Buddy Matching System (MVP)
+
+input:
+  format: csv
+  # For CSV mode, file_path is a directory containing two CSV files.
+  file_path: data
+  erasmus_csv: Erasmus.csv
+  esn_csv: ESN.csv
+
+  # Erasmus-only filtering (mandatory)
+  buddy_interest_column: "Are you interested in getting a buddy?"
+  buddy_interest_value: "Yes"
+
+schema:
+  # Required metadata columns in both datasets (Erasmus and ESN)
+  required_columns:
+    - "Timestamp"
+    - "Name"
+    - "Surname"
+
+  # Deterministic tie-breaking identifier (present in both datasets)
+  identifier_column: "Timestamp"
+
+  # Only these exact headers are treated as questionnaire columns and used for matching.
+  # IMPORTANT: These must be IDENTICAL in BOTH datasets.
+  # NOTE: The ESN dataset does not include the buddy-interest column; that's fine.
+  question_columns:
+    - "A) Mountains 🏔️\nB) Sea 🌊"
+    - "A) Beer 🍺\nB) Coctail  🍸"
+    - "A) City life 🏙️\nB) Nature 🌲"
+    - "A) Going out 🏃\nB) Relaxing at home 📖 🛋️"
+    - "A) Planning ahead 📅\nB) Being spontaneous 🎲"
+    - "A) Morning person 🌅\nB) Night owl 🌙"
+    - "A) Big parties 🎉\nB) Small gatherings 🍵"
+    - "A) Easily talk to new people 😄\nB) Need time to open up 🙂"
+    - "A) I like organizing things\nB) I prefer joining others"
+    - "A) Studying regularly 📚\nB) Studying last minute ⏰"
+    - "A) Structured routine\nB) Flexible schedule"
+    - "A) Prefer clear rules\nB) Prefer freedom"
+    - "A)  I prefer familiar things\nB)  I like trying new things"
+    - "A) Coffee ☕\nB) Tea 🍵"
+    - "A) Cats 🐈\nB) Dogs 🐶"
+    - "A) screentime <= 5 hours 📱📱\nB) screentime > 5 hours 📱"
+
+  # Answer encoding rules (MVP)
+  # Valid: "A" or "B"
+  # Invalid/empty: ignored for that question only (does not count as match/mismatch)
+  answer_encoding: "AB"
+
+matching:
+  metric: "hamming"
+  top_k: 10
+
+output:
+  out_dir: outputs
+  per_esner_sheets: true
