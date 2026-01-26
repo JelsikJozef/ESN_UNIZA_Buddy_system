@@ -7,6 +7,9 @@ input:
   erasmus_csv: Erasmus.csv
   esn_csv: ESN.csv
   csv_separator: ","  # Optional; override detected delimiter
+  timestamp_min: "1/22/2026 14:10:12"  # Optional; ignore Erasmus rows before this timestamp
+  timestamp_column: "Timestamp"        # Optional; override column used for timestamp filtering
+  timestamp_format: "%m/%d/%Y %H:%M:%S"  # Optional; strptime format for timestamp_min and column values
 
   # Erasmus-only filtering (mandatory)
   buddy_interest_column: "Are you interested in getting a buddy?"

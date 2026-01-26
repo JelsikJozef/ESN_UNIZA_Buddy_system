@@ -59,8 +59,34 @@ def _apply_buddy_filter(df: pd.DataFrame, column: str, value: str) -> pd.DataFra
     return df[df[column] == value].reset_index(drop=True)
 
 
+def _apply_timestamp_filter(
+    df: pd.DataFrame,
+    column: str,
+    min_timestamp: str,
+    timestamp_format: str | None = None,
+) -> pd.DataFrame:
+    if column not in df.columns:
+        raise ValueError(f"Missing timestamp column: {column}")
+    try:
+        cutoff = (
+            pd.to_datetime(min_timestamp, format=timestamp_format)
+            if timestamp_format
+            else pd.to_datetime(min_timestamp)
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise ValueError(f"Invalid timestamp_min value: {min_timestamp}") from exc
+    series = (
+        pd.to_datetime(df[column], format=timestamp_format, errors="coerce")
+        if timestamp_format
+        else pd.to_datetime(df[column], errors="coerce")
+    )
+    filtered = df[series >= cutoff].copy()
+    return filtered.reset_index(drop=True)
+
+
 def load_tables(config: Dict, debug: bool | None = None) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, int]]:
     input_cfg = config.get("input", {})
+    schema_cfg = config.get("schema", {})
     fmt = (input_cfg.get("format") or "").lower()
     debug_mode = is_debug_mode() if debug is None else debug
     file_path = input_cfg.get("file_path")
@@ -71,10 +97,21 @@ def load_tables(config: Dict, debug: bool | None = None) -> Tuple[pd.DataFrame, 
     buddy_column = input_cfg.get("buddy_interest_column")
     buddy_value = input_cfg.get("buddy_interest_value")
     csv_separator = input_cfg.get("csv_separator")
+    timestamp_min = input_cfg.get("timestamp_min")
+    timestamp_format = input_cfg.get("timestamp_format")
+    timestamp_column = input_cfg.get("timestamp_column") or schema_cfg.get("identifier_column") or "Timestamp"
     if isinstance(csv_separator, str):
         csv_separator = csv_separator.strip() or None
     else:
         csv_separator = None
+    if isinstance(timestamp_min, str):
+        timestamp_min = timestamp_min.strip() or None
+    else:
+        timestamp_min = None
+    if isinstance(timestamp_format, str):
+        timestamp_format = timestamp_format.strip() or None
+    else:
+        timestamp_format = None
 
     if fmt not in {"csv", "xlsx"}:
         raise ValueError(f"Unsupported input format: {fmt}")
@@ -103,11 +140,23 @@ def load_tables(config: Dict, debug: bool | None = None) -> Tuple[pd.DataFrame, 
     erasmus_df = _normalize_headers(erasmus_df)
 
     buddy_column = _normalize_column_name(buddy_column)
+    timestamp_column = _normalize_column_name(timestamp_column)
+
+    erasmus_loaded = len(erasmus_df)
+    if timestamp_min:
+        erasmus_df = _apply_timestamp_filter(
+            erasmus_df,
+            timestamp_column,
+            timestamp_min,
+            timestamp_format=timestamp_format,
+        )
 
     stats = {
         "esn_loaded": len(esn_df),
-        "erasmus_loaded": len(erasmus_df),
+        "erasmus_loaded": erasmus_loaded,
     }
+    if timestamp_min:
+        stats["erasmus_after_timestamp_filter"] = len(erasmus_df)
 
     erasmus_filtered = _apply_buddy_filter(erasmus_df, buddy_column, buddy_value)
 

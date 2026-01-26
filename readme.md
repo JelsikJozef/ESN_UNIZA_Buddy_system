@@ -47,6 +47,9 @@ All behavior is driven by `config.yml`.
   - `erasmus_csv`: filename for Erasmus CSV
   - `esn_csv`: filename for ESN CSV
   - `csv_separator`: optional single-character delimiter override (defaults to auto-detecting `;` then `,`)
+  - `timestamp_min`: optional ISO/date string; removes Erasmus rows with timestamp earlier than this value
+  - `timestamp_column`: override for the timestamp column header (defaults to `schema.identifier_column` or `Timestamp`)
+  - `timestamp_format`: optional `datetime.strptime` pattern for parsing both `timestamp_min` and the column values (e.g. `%m/%d/%Y %H:%M:%S`)
 - XLSX mode only:
   - `erasmus_sheet`: sheet name for Erasmus
   - `esn_sheet`: sheet name for ESN

@@ -70,3 +70,69 @@ def test_ingest_normalizes_multiline_headers(tmp_path):
     assert all("\r" not in col for col in erasmus_df.columns)
     assert len(erasmus_df) == 1
     assert set(erasmus_df[buddy_column]) == {"Yes"}
+
+
+def test_ingest_applies_timestamp_min_filter():
+    data_dir = Path(__file__).parent / "data"
+    raw_erasmus = pd.read_csv(data_dir / "Erasmus.csv", sep=";")
+    cutoff = "2026-01-15 21:00:00"
+
+    config = {
+        "input": {
+            "format": "csv",
+            "file_path": str(data_dir),
+            "esn_csv": "ESN.csv",
+            "erasmus_csv": "Erasmus.csv",
+            "buddy_interest_column": "Are you interested in getting a buddy?",
+            "buddy_interest_value": "Yes",
+            "timestamp_min": cutoff,
+        }
+    }
+
+    erasmus_df, _, stats = ingest.load_tables(config)
+
+    ts_all = pd.to_datetime(raw_erasmus["Timestamp"])
+    expected_after_ts = raw_erasmus[ts_all >= pd.to_datetime(cutoff)]
+    expected_buddy = expected_after_ts[
+        expected_after_ts["Are you interested in getting a buddy?"] == "Yes"
+    ]
+
+    assert len(erasmus_df) == len(expected_buddy)
+    assert stats["erasmus_loaded"] == len(raw_erasmus)
+    assert stats["erasmus_after_timestamp_filter"] == len(expected_after_ts)
+    assert stats["erasmus_after_filter"] == len(expected_buddy)
+    assert (pd.to_datetime(erasmus_df["Timestamp"]) >= pd.to_datetime(cutoff)).all()
+
+
+def test_ingest_timestamp_filter_accepts_custom_format(tmp_path):
+    data_dir = tmp_path
+    buddy_col = "Are you interested in getting a buddy?"
+    erasmus_csv = (
+        "Timestamp;Name;Surname;" f"{buddy_col}\n"
+        "1/21/2026 10:00:00;Jane;Doe;Yes\n"
+        "1/22/2026 14:10:12;John;Smith;Yes\n"
+    )
+    esn_csv = "Timestamp;Name;Surname\n1/20/2026 09:00:00;Eva;Helper\n"
+    (data_dir / "Erasmus.csv").write_text(erasmus_csv, encoding="utf-8")
+    (data_dir / "ESN.csv").write_text(esn_csv, encoding="utf-8")
+
+    config = {
+        "input": {
+            "format": "csv",
+            "file_path": str(data_dir),
+            "esn_csv": "ESN.csv",
+            "erasmus_csv": "Erasmus.csv",
+            "buddy_interest_column": buddy_col,
+            "buddy_interest_value": "Yes",
+            "timestamp_min": "1/22/2026 14:10:12",
+            "timestamp_format": "%m/%d/%Y %H:%M:%S",
+        }
+    }
+
+    erasmus_df, _, stats = ingest.load_tables(config)
+
+    assert len(erasmus_df) == 1
+    assert erasmus_df.iloc[0]["Name"] == "John"
+    assert stats["erasmus_after_timestamp_filter"] == 1
+    assert stats["erasmus_after_filter"] == 1
+
