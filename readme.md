@@ -26,6 +26,12 @@ pip install -r requirements.txt
 ## Run
 ```bash
 python -m buddy_matching --config config.yml
+
+# Optional: print CSV separators tried and column headers during load
+python -m buddy_matching --config config.yml --debug-csv
+
+# Or enable debug via env var
+set DEBUG_CSV=1 & python -m buddy_matching --config config.yml
 ```
 The CLI prints the generated Excel path and writes the workbook into the configured `output.out_dir`.
 
@@ -40,6 +46,7 @@ All behavior is driven by `config.yml`.
 - CSV mode only:
   - `erasmus_csv`: filename for Erasmus CSV
   - `esn_csv`: filename for ESN CSV
+  - `csv_separator`: optional single-character delimiter override (defaults to auto-detecting `;` then `,`)
 - XLSX mode only:
   - `erasmus_sheet`: sheet name for Erasmus
   - `esn_sheet`: sheet name for ESN
@@ -80,11 +87,14 @@ The exported workbook contains:
 - `Summary` sheet
 - one sheet per ESN member (when enabled)
 
-Per-ESN-member sheet columns:
+Per-ESN-member sheet columns (core fields):
 - `Rank`
 - `Student Name`
 - `Student Surname`
-- `Distance (Hamming)`
+- `Whatsapp contact` (or detected Whatsapp column name)
+- `Number of same answers`
+- `Number of different answers`
+Plus all answered, non-question Erasmus fields are appended for context.
 
 ## Testing
 Tests use small CSV fixtures from `tests/data/`.

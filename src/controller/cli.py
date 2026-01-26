@@ -15,13 +15,13 @@ def _load_config(path: Path) -> Dict:
         return yaml.safe_load(handle) or {}
 
 
-def run_pipeline(config_path: Path) -> Path:
+def run_pipeline(config_path: Path, debug_csv: bool = False) -> Path:
     config = _load_config(config_path)
     matching_cfg = config.get("matching", {})
     if matching_cfg.get("metric", "hamming") != "hamming":
         raise ValueError(f"Unsupported matching metric: {matching_cfg.get('metric')}")
 
-    erasmus_df, esn_df, stats = ingest.load_tables(config)
+    erasmus_df, esn_df, stats = ingest.load_tables(config, debug=debug_csv)
     erasmus_df, esn_df = validate.validate_tables(erasmus_df, esn_df, config)
     esn_vec, erasmus_vec = vectorize.vectorize_tables(esn_df, erasmus_df, config)
     distances = match.compute_distance_matrix(esn_vec.vectors, erasmus_vec.vectors)
@@ -39,9 +39,14 @@ def run_pipeline(config_path: Path) -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser(description="ESN Buddy Matching CLI")
     parser.add_argument("--config", required=True, help="Path to config.yml")
+    parser.add_argument(
+        "--debug-csv",
+        action="store_true",
+        help="Print CSV columns and attempted separators during load",
+    )
     args = parser.parse_args()
     try:
-        out_path = run_pipeline(Path(args.config))
+        out_path = run_pipeline(Path(args.config), debug_csv=args.debug_csv)
     except Exception as exc:  # noqa: BLE001
         print(f"Error: {exc}")
         raise SystemExit(1)

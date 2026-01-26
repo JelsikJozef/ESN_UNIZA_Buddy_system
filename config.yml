@@ -6,6 +6,7 @@ input:
   file_path: data
   erasmus_csv: Erasmus.csv
   esn_csv: ESN.csv
+  csv_separator: ","  # Optional; override detected delimiter
 
   # Erasmus-only filtering (mandatory)
   buddy_interest_column: "Are you interested in getting a buddy?"
