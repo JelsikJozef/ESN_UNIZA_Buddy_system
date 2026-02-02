@@ -9,7 +9,7 @@ Configuration settings in the Streamlit GUI now persist correctly when you navig
 
 1. **Start the application:**
    ```bash
-   streamlit run buddy_matching/gui/app.py
+   streamlit run gui_app.py
    ```
 
 2. **Go to Input screen and load your data:**

@@ -144,7 +144,7 @@ git pull
 # pip install -r requirements.txt  # Optional refresh
 
 # 3. Restart Streamlit
-streamlit run buddy_matching/gui/app.py
+streamlit run gui_app.py
 ```
 
 #### Verification:

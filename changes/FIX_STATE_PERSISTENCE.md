@@ -87,7 +87,7 @@ This provides immediate visual feedback that settings are being preserved.
 ### Test Procedure:
 1. **Start the GUI:**
    ```bash
-   streamlit run buddy_matching/gui/app.py
+   streamlit run gui_app.py
    ```
 
 2. **Load Data (Input Screen):**

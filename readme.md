@@ -27,7 +27,7 @@ pip install -r requirements.txt
 
 ### Option 1: GUI (Recommended for non-technical users)
 ```bash
-streamlit run buddy_matching/gui/app.py
+streamlit run gui_app.py
 ```
 
 The GUI provides:
@@ -143,15 +143,25 @@ The system correctly handles missing or invalid answers:
 - **Deterministic**: Same config + data = same results
 - **Debug mode**: Detailed logging for troubleshooting
 
-## Testing
-Run the test suite:
-```bash
-pytest tests/
+## Project Structure
+
+This project follows a **strict MVC (Model-View-Controller) architecture**:
+
+```
+src/
+├── model/          # Business logic (ingest, validate, vectorize, match, rank)
+├── view/           # Output rendering (Excel export, Streamlit GUI)
+└── controller/     # Orchestration (CLI, pipeline)
 ```
 
+For detailed architecture documentation, see:
+- **PROJECT_STRUCTURE.md** - Complete structure guide
+- **architecture.md** - MVC specification and business rules
+
 ## Testing
+
 Tests use small CSV fixtures from `tests/data/`.
 
 ```bash
-pytest
+pytest tests/
 ```

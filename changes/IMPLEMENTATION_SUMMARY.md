@@ -86,7 +86,7 @@
 
 ### 6. README Updated ✓
 **File:** `readme.md`
-- Added GUI run instructions: `streamlit run buddy_matching/gui/app.py`
+- Added GUI run instructions: `streamlit run gui_app.py`
 - Documented all GUI features
 - Explained NaN-aware matching
 - Updated output column documentation
@@ -153,7 +153,7 @@ python -m buddy_matching --config config.yml
 
 ### GUI (New)
 ```bash
-streamlit run buddy_matching/gui/app.py
+streamlit run gui_app.py
 ```
 
 The GUI will open in your default browser at http://localhost:8501

@@ -4,23 +4,29 @@ Main application entry point.
 """
 import io
 import sys
-import tempfile
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import pandas as pd
 import streamlit as st
 import yaml
 
-# Add project root to path
+# Add project root to path if running standalone
 project_root = Path(__file__).parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from buddy_matching.gui import components, state
-from src.controller.pipeline import PipelineArtifacts, compute_comparison_stats, run_pipeline_from_config
+# Try absolute imports first (when run as module), fall back to relative
+try:
+    from src.view.gui import components, state
+    from src.controller.pipeline import PipelineArtifacts, compute_comparison_stats, run_pipeline_from_config
+except ModuleNotFoundError:
+    # If running standalone, use relative imports
+    import components
+    import state
+    from ...controller.pipeline import PipelineArtifacts, compute_comparison_stats, run_pipeline_from_config
 
 # Page configuration
 st.set_page_config(

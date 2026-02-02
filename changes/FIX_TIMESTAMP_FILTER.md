@@ -113,7 +113,7 @@ python test_timestamp_filter.py
 Expected output: `✅ Timestamp filter works correctly!`
 
 ### Manual Test in GUI:
-1. **Start GUI**: `streamlit run buddy_matching/gui/app.py`
+1. **Start GUI**: `streamlit run gui_app.py`
 2. **Load data** with timestamp column (e.g., "Timestamp")
 3. **Go to Configure screen**
 4. **Expand "Timestamp Filter (optional)"**

@@ -4,7 +4,7 @@
 
 ### 1. Spusti GUI / Start GUI
 ```bash
-streamlit run buddy_matching/gui/app.py
+streamlit run gui_app.py
 ```
 
 ### 2. Load Data / Nahraj dáta

@@ -20,7 +20,7 @@ python test_state_fix.py
 python test_timestamp_filter.py
 
 # Start GUI
-streamlit run buddy_matching/gui/app.py
+streamlit run gui_app.py
 ```
 
 ---

@@ -9,7 +9,7 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from buddy_matching.gui.state import ConfigState
+from src.view.gui.state import ConfigState
 
 
 def test_config_state_persistence():
