@@ -4,8 +4,7 @@ from typing import Dict
 
 import yaml
 
-from src.model import ingest, match, rank, validate, vectorize
-from src.view import export_xlsx
+from src.controller.pipeline import run_pipeline_from_config
 
 
 def _load_config(path: Path) -> Dict:
@@ -16,24 +15,10 @@ def _load_config(path: Path) -> Dict:
 
 
 def run_pipeline(config_path: Path, debug_csv: bool = False) -> Path:
+    """CLI wrapper for the pipeline."""
     config = _load_config(config_path)
-    matching_cfg = config.get("matching", {})
-    if matching_cfg.get("metric", "hamming") != "hamming":
-        raise ValueError(f"Unsupported matching metric: {matching_cfg.get('metric')}")
-
-    erasmus_df, esn_df, stats = ingest.load_tables(config, debug=debug_csv)
-    erasmus_df, esn_df = validate.validate_tables(erasmus_df, esn_df, config)
-    esn_vec, erasmus_vec = vectorize.vectorize_tables(esn_df, erasmus_df, config)
-    distances = match.compute_distance_matrix(esn_vec.vectors, erasmus_vec.vectors)
-
-    top_k = matching_cfg.get("top_k")
-    if top_k is None:
-        top_k = len(erasmus_df)
-    identifier_column = config.get("schema", {}).get("identifier_column")
-    rankings = rank.rank_candidates(distances, erasmus_df, top_k, identifier_column)
-
-    out_path = export_xlsx.export_results(rankings, esn_df, erasmus_df, stats, config)
-    return out_path
+    artifacts = run_pipeline_from_config(config, debug=debug_csv)
+    return artifacts.output_path
 
 
 def main() -> None:

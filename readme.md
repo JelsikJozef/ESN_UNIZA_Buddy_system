@@ -1,21 +1,21 @@
-# ESN UNIZA Buddy Matching System — MVP
+# ESN UNIZA Buddy Matching System
 
-This repository implements the **First MVP** described in `architecture.md`.
+This repository implements an **automated buddy matching system** for ESN UNIZA coordinators, providing both **CLI** and **GUI** interfaces.
 
-## What it does (MVP)
+## What it does
 - Loads **Erasmus** and **ESN** datasets from **CSV** or **XLSX**.
 - Applies the buddy-interest filter **only to Erasmus**:
   - `Are you interested in getting a buddy? == "Yes"` (value and column name are configurable).
-- Uses only the **explicitly configured question columns** from `config.yml`.
+- Uses only the **explicitly configured question columns** from `config.yml` (or selected via GUI).
 - Encodes answers using **AB** encoding:
   - valid: `A` or `B`
-  - invalid/empty: ignored **for that question only**
+  - invalid/empty: ignored **for that question only** (NaN-aware matching)
 - Computes similarity using **unweighted Hamming distance** (lower is better).
 - Produces **ranking-only** results: Top-K Erasmus candidates **per ESN member**.
 - Exports a timestamped Excel workbook to `outputs/` (Summary + per-ESN-member sheets).
 
 ## Requirements
-- Python 3.x
+- Python 3.9+
 - Dependencies in `requirements.txt`
 
 ## Install
@@ -24,6 +24,24 @@ pip install -r requirements.txt
 ```
 
 ## Run
+
+### Option 1: GUI (Recommended for non-technical users)
+```bash
+streamlit run buddy_matching/gui/app.py
+```
+
+The GUI provides:
+- **Input**: Upload XLSX or CSV files, preview data, autodetect question columns
+- **Configure**: Interactive parameter configuration without editing YAML
+  - All settings persist when navigating between pages
+  - Configuration summary shows current settings at a glance
+  - Live preview shows filter effects in real-time (buddy filter, timestamp filter)
+- **Run**: Execute matching with progress tracking
+- **Results**: Browse matches interactively by ESN member, view question-by-question comparisons
+- **Export**: Download Excel workbook and consolidated CSV
+- **Logs**: View run history and debug logs
+
+### Option 2: CLI (For automation and power users)
 ```bash
 python -m buddy_matching --config config.yml
 
@@ -31,7 +49,8 @@ python -m buddy_matching --config config.yml
 python -m buddy_matching --config config.yml --debug-csv
 
 # Or enable debug via env var
-set DEBUG_CSV=1 & python -m buddy_matching --config config.yml
+set DEBUG_CSV=1
+python -m buddy_matching --config config.yml
 ```
 The CLI prints the generated Excel path and writes the workbook into the configured `output.out_dir`.
 
@@ -59,8 +78,10 @@ All behavior is driven by `config.yml`.
 
 ### `schema`
 - `required_columns`: required metadata columns in **both** datasets (e.g. `Timestamp`, `Name`, `Surname`)
-- `identifier_column`: used **only** for deterministic tie-breaking
+- `identifier_column`: used **only** for deterministic tie-breaking when multiple students have the same distance
+  - typically set to `Timestamp` (earlier submissions get priority in ties)
   - if missing or non-unique in Erasmus: falls back to original Erasmus row order
+  - ensures reproducible and fair ranking
 - `question_columns`: list of **exact** header strings (including newlines/emojis)
   - validation fails if any is missing from either dataset
 - `answer_encoding`: must be `AB`
@@ -87,17 +108,46 @@ Must contain:
 
 ## Output
 The exported workbook contains:
-- `Summary` sheet
+- `Summary` sheet with run statistics
 - one sheet per ESN member (when enabled)
 
 Per-ESN-member sheet columns (core fields):
 - `Rank`
 - `Student Name`
 - `Student Surname`
-- `Whatsapp contact` (or detected Whatsapp column name)
-- `Number of same answers`
-- `Number of different answers`
+- `Whatsapp contact` (or detected contact column name)
+- `Compared questions` - number of questions where both ESN member and student provided valid answers
+- `Number of same answers` - count of matching answers (accounts for NaN values)
+- `Number of different answers` - count of differing answers (Hamming distance)
+
 Plus all answered, non-question Erasmus fields are appended for context.
+
+## Key Features
+
+### NaN-Aware Matching
+The system correctly handles missing or invalid answers:
+- Only questions with valid answers from **both** ESN member and student are compared
+- `Compared questions` = count of questions where both provided A or B
+- `Same answers` = `Compared questions` - `Different answers`
+- This ensures accurate similarity metrics even when data quality varies
+
+### GUI Features
+- **No YAML editing required**: All configuration through interactive UI
+- **Data validation**: Real-time feedback on column health and filter effects
+- **Question autodetection**: Automatically identifies likely question columns
+- **Interactive results browser**: View matches per ESN member with detailed comparisons
+- **Export options**: Excel workbook + consolidated CSV
+
+### CLI Features
+- **Automation-friendly**: Script-ready with config files
+- **Deterministic**: Same config + data = same results
+- **Debug mode**: Detailed logging for troubleshooting
+
+## Testing
+Run the test suite:
+```bash
+pytest tests/
+```
 
 ## Testing
 Tests use small CSV fixtures from `tests/data/`.
