@@ -996,6 +996,24 @@ def show_results_screen():
     st.markdown("---")
     st.subheader("Manual Assignment")
 
+    # Show current assignments for this ESN member
+    esn_assignments = assignment_state.get_assignments_for_esn(esn_idx)
+    if esn_assignments:
+        st.write("**Current Assignments:**")
+        for assignment in esn_assignments:
+            erasmus_student = artifacts.erasmus_df.iloc[assignment.erasmus_index]
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.write(f"✓ {assignment.erasmus_name} {assignment.erasmus_surname}")
+            with col2:
+                if st.button("🗑️ Unassign", key=f"unassign_{esn_idx}_{assignment.erasmus_index}"):
+                    if assignment_state.remove_assignment(assignment.erasmus_index):
+                        st.success(f"Unassigned {assignment.erasmus_name} {assignment.erasmus_surname}")
+                        st.rerun()
+                    else:
+                        st.error("Failed to unassign student")
+        st.markdown("---")
+
     # Get available students (not already assigned)
     available_matches = [m for m in matches_data if m["Status"] == "Available"]
 
@@ -1174,13 +1192,84 @@ def show_export_screen():
 
     st.markdown("---")
 
-    # C) Export Manual Assignments with ALL columns
-    st.subheader("Export Manual Assignments")
+    # C) Manage Manual Assignments
+    st.subheader("Manage Manual Assignments")
 
     assignments = assignment_state.assignments
 
     if not assignments:
         st.info("No manual assignments created yet. Go to the Results screen to create assignments.")
+    else:
+        # C1) Show all assignments with unassign buttons
+        st.write("**Current Assignments:**")
+
+        assignments_display = []
+        for idx, assignment in enumerate(assignments):
+            esn_row = artifacts.esn_df.iloc[assignment.esn_index]
+            erasmus_row = artifacts.erasmus_df.iloc[assignment.erasmus_index]
+
+            # Calculate matching count
+            esn_vec = artifacts.esn_vectors[assignment.esn_index]
+            erasmus_vec = artifacts.erasmus_vectors[assignment.erasmus_index]
+
+            matching_count = 0
+            compared_count = 0
+
+            for i in range(min(len(esn_vec), len(erasmus_vec))):
+                esn_val = esn_vec[i]
+                erasmus_val = erasmus_vec[i]
+
+                if esn_val is not None and erasmus_val is not None:
+                    import numpy as np
+                    esn_is_nan = isinstance(esn_val, float) and np.isnan(esn_val)
+                    erasmus_is_nan = isinstance(erasmus_val, float) and np.isnan(erasmus_val)
+
+                    if not esn_is_nan and not erasmus_is_nan:
+                        compared_count += 1
+                        if esn_val == erasmus_val:
+                            matching_count += 1
+
+            # Display assignment with unassign button
+            col1, col2, col3, col4 = st.columns([3, 3, 2, 1])
+
+            with col1:
+                st.write(f"**ESN:** {esn_row.get('Name', '')} {esn_row.get('Surname', '')}")
+
+            with col2:
+                st.write(f"**Erasmus:** {erasmus_row.get('Name', '')} {erasmus_row.get('Surname', '')}")
+
+            with col3:
+                st.write(f"**Match:** {matching_count}/{compared_count}")
+
+            with col4:
+                if st.button("🗑️", key=f"unassign_export_{assignment.erasmus_index}_{idx}", help="Unassign this student"):
+                    if assignment_state.remove_assignment(assignment.erasmus_index):
+                        st.success(f"Unassigned {erasmus_row.get('Name', '')} {erasmus_row.get('Surname', '')}")
+                        st.rerun()
+                    else:
+                        st.error("Failed to unassign student")
+
+        # Add clear all button
+        st.markdown("---")
+        col_clear1, col_clear2 = st.columns([3, 1])
+        with col_clear2:
+            if st.button("🗑️ Clear All Assignments", type="secondary"):
+                if st.session_state.get("confirm_clear_all", False):
+                    assignment_state.clear_all()
+                    st.success("All assignments cleared!")
+                    st.session_state.confirm_clear_all = False
+                    st.rerun()
+                else:
+                    st.session_state.confirm_clear_all = True
+                    st.warning("Click again to confirm clearing all assignments")
+
+        st.markdown("---")
+
+    # D) Export Manual Assignments with ALL columns
+    st.subheader("Export Manual Assignments")
+
+    if not assignments:
+        st.info("No assignments to export.")
     else:
         st.write(f"Export {len(assignments)} manual assignment(s).")
         st.info("📋 Export includes ALL columns from ESN and Erasmus datasets (except question answers) + matching count.")

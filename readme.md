@@ -38,7 +38,11 @@ The GUI provides:
   - Live preview shows filter effects in real-time (buddy filter, timestamp filter)
 - **Run**: Execute matching with progress tracking
 - **Results**: Browse matches interactively by ESN member, view question-by-question comparisons
+  - **Manual Assignment**: Assign Erasmus students to ESN members manually
+  - **Unassign**: Remove incorrect assignments and reassign students (NEW!)
 - **Export**: Download Excel workbook and consolidated CSV
+  - Export manual assignments with full student details
+  - Manage all assignments with unassign capability (NEW!)
 - **Logs**: View run history and debug logs
 
 ### Option 2: CLI (For automation and power users)

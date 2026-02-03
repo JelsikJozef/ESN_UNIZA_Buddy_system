@@ -10,9 +10,38 @@
 
 ---
 
-## 🆕 Latest: Manual Assignment Feature (2026-02-03)
+## 🆕 Latest Updates (2026-02-03)
 
-### For Users
+### 🎯 NEW: Unassign Feature
+**Status:** ✅ Complete and tested
+
+#### For Users
+1. **UNASSIGN_QUICK_REFERENCE.md** ⭐ VISUAL GUIDE
+   - Where to find unassign feature
+   - Step-by-step examples with visuals
+   - Common scenarios
+   - Tips and tricks
+   - ~3 min read
+
+#### For Developers & Users
+2. **UNASSIGN_IMPLEMENTATION_SUMMARY.md** ⭐ OVERVIEW
+   - What was implemented
+   - Problem solved
+   - Test results
+   - Usage statistics
+   - ~5 min read
+
+3. **UNASSIGN_FEATURE_GUIDE.md** ⭐ TECHNICAL DOCS
+   - Complete implementation details
+   - Backend and frontend integration
+   - Code examples
+   - Testing instructions
+   - Future enhancements
+   - ~10 min read
+
+### Manual Assignment Feature (2026-02-03)
+
+#### For Users
 1. **MANUAL_ASSIGNMENT_GUIDE.md** ⭐ USER GUIDE
    - How to assign buddies manually
    - Step-by-step instructions
@@ -20,7 +49,7 @@
    - Troubleshooting
    - ~5 min read
 
-### For Developers
+#### For Developers
 1. **IMPLEMENTATION_COMPLETE.md** ⭐ EXECUTIVE SUMMARY
    - Feature overview
    - What was delivered

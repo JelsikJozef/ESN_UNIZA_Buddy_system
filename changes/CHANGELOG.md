@@ -1,8 +1,30 @@
 # Changelog - GUI Fixes
 
-## Version: 2026-02-03
+## Version: 2026-02-03 (Latest)
 
 ### ✨ New Features
+
+#### Unassign Feature (NEW!)
+- **Feature**: Remove and reassign Erasmus students after assignment
+- **Capability**: Fix mistakes by unassigning students and reassigning them
+- **Key Features**:
+  - **Unassign individual students** in Results screen
+  - **Unassign individual students** in Export screen
+  - **Clear all assignments** with confirmation
+  - Immediate visual feedback and screen refresh
+  - Student becomes available for reassignment instantly
+  - Display current assignments per ESN member
+  - View all assignments with match scores
+- **Implementation**:
+  - Modified: `src/view/gui/app.py` (Results & Export screens)
+  - Leverages existing: `AssignmentState.remove_assignment()` and `clear_all()`
+- **Testing**: 4 new unit tests + 18 existing tests (22 total, 100% pass rate)
+- **Documentation**:
+  - `changes/UNASSIGN_IMPLEMENTATION_SUMMARY.md` (overview)
+  - `changes/UNASSIGN_FEATURE_GUIDE.md` (technical guide)
+  - `changes/UNASSIGN_QUICK_REFERENCE.md` (visual user guide)
+- **Impact**: Critical usability improvement - users can now correct assignment mistakes
+- **Status**: ✅ Complete and tested
 
 #### Config Import Feature
 - **Feature**: YAML configuration file import
