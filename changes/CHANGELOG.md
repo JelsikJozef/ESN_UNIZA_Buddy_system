@@ -1,5 +1,56 @@
 # Changelog - GUI Fixes
 
+## Version: 2026-02-03
+
+### ✨ New Features
+
+#### Config Import Feature
+- **Feature**: YAML configuration file import
+- **Capability**: Load saved configuration files (config.yml) into the GUI
+- **Key Features**:
+  - Upload config.yml via file uploader
+  - Automatically populate all configuration settings
+  - Support for partial configurations
+  - Graceful handling of missing keys
+  - Compatible with CLI config.yml format
+  - Roundtrip compatible with Config Export
+- **Implementation**:
+  - New function: `apply_config_to_state()` in `src/view/gui/app.py`
+  - Updated config import UI (replaced TODO with working implementation)
+- **Testing**: 7 new unit tests (100% pass rate)
+- **Documentation**: `changes/CONFIG_IMPORT_FEATURE.md`
+- **Benefits**:
+  - Quick configuration reuse across sessions
+  - Easy sharing of configurations between users
+  - Configuration version control support
+  - Time-saving for repeated tasks
+- **Status**: ✅ Complete and tested
+
+#### Manual Buddy Assignment Feature (MAJOR)
+- **Feature**: Manual assignment of Erasmus students to ESN buddies
+- **Capability**: ESN coordinators can now manually pair students with buddies through the GUI
+- **Key Features**:
+  - Assign students directly from ranked results
+  - Duplicate prevention (one student = one buddy)
+  - Visual status indicators (Available/ASSIGNED)
+  - Remove assignments (unassign)
+  - View all assignments in one place
+  - Export assignments as CSV and Excel
+  - Session-based state management
+- **Architecture**: 
+  - New controller: `src/controller/assignments.py` (assignment state management)
+  - New export: `src/view/export_assignments.py` (CSV/XLSX export)
+  - Modified: `src/view/gui/app.py` (Results & Export screens)
+  - Modified: `src/view/gui/state.py` (assignment state integration)
+- **Testing**: 18 new unit tests (100% pass rate)
+- **Documentation**:
+  - `changes/MANUAL_ASSIGNMENT_FEATURE.md` (technical documentation)
+  - `changes/MANUAL_ASSIGNMENT_GUIDE.md` (user guide)
+- **Impact**: Enables manual curation of buddy pairs while maintaining automatic ranking as guidance
+- **Backward Compatibility**: ✅ No breaking changes, CLI unchanged, ranking algorithm unchanged
+
+---
+
 ## Version: 2026-02-02
 
 ### 🐛 Bug Fixes

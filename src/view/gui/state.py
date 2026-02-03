@@ -15,6 +15,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from src.controller.pipeline import PipelineArtifacts
+from src.controller.assignments import AssignmentState
 
 
 @dataclass
@@ -112,6 +113,9 @@ def init_session_state() -> None:
     if "run_history" not in st.session_state:
         st.session_state.run_history = []
 
+    if "assignments" not in st.session_state:
+        st.session_state.assignments = AssignmentState()
+
 
 def reset_results() -> None:
     """Clear results state."""
@@ -136,3 +140,9 @@ def get_results_state() -> ResultsState:
 def log_message(message: str, level: str = "INFO") -> None:
     """Add a log message to the run logs."""
     st.session_state.run_logs.append({"level": level, "message": message})
+
+
+def get_assignment_state() -> AssignmentState:
+    """Get assignment state."""
+    return st.session_state.assignments
+

@@ -310,6 +310,61 @@ def read_csv_with_fallback(file_bytes: bytes, separator: Optional[str], label: s
     raise ValueError(f"Failed to parse {label} CSV file with any known delimiter")
 
 
+def apply_config_to_state(config_dict: dict, config_state) -> None:
+    """
+    Apply loaded YAML config to ConfigState.
+
+    Args:
+        config_dict: Parsed YAML configuration dictionary
+        config_state: ConfigState instance to update
+    """
+    # Apply filters
+    filters = config_dict.get("filters", {})
+
+    # Buddy filter
+    buddy_filter = filters.get("buddy_interest", {})
+    if "enabled" in buddy_filter:
+        config_state.buddy_filter_enabled = buddy_filter["enabled"]
+    if "column" in buddy_filter:
+        config_state.buddy_filter_column = buddy_filter["column"]
+    if "value" in buddy_filter:
+        config_state.buddy_filter_value = buddy_filter["value"]
+
+    # Timestamp filter
+    timestamp_filter = filters.get("timestamp_min", {})
+    if "enabled" in timestamp_filter:
+        config_state.timestamp_filter_enabled = timestamp_filter["enabled"]
+    if "column" in timestamp_filter:
+        config_state.timestamp_filter_column = timestamp_filter["column"]
+    if "min_value" in timestamp_filter:
+        config_state.timestamp_filter_min = timestamp_filter["min_value"]
+    if "format" in timestamp_filter:
+        config_state.timestamp_filter_format = timestamp_filter.get("format", "")
+
+    # Apply schema
+    schema = config_dict.get("schema", {})
+    if "required_columns" in schema:
+        config_state.required_columns = schema["required_columns"]
+    if "identifier_column" in schema:
+        config_state.identifier_column = schema["identifier_column"]
+    if "question_columns" in schema:
+        config_state.question_columns = schema["question_columns"]
+
+    # Apply matching settings
+    matching = config_dict.get("matching", {})
+    if "top_k" in matching:
+        config_state.top_k = matching["top_k"]
+
+    # Apply output settings
+    output = config_dict.get("output", {})
+    if "per_esner_sheets" in output:
+        config_state.per_esner_sheets = output["per_esner_sheets"]
+    if "include_extra_fields" in output:
+        config_state.include_extra_fields = output["include_extra_fields"]
+    if "out_prefix" in output:
+        config_state.output_prefix = output["out_prefix"]
+
+
 def show_configure_screen():
     """Screen 2: Configure matching parameters."""
     st.title("Configure Matching")
@@ -579,8 +634,8 @@ def show_configure_screen():
         if uploaded_config:
             try:
                 config_dict = yaml.safe_load(uploaded_config)
-                # TODO: Apply config to state
-                st.success("Config imported (feature in progress)")
+                apply_config_to_state(config_dict, config_state)
+                st.success("Config imported successfully")
             except Exception as e:
                 components.show_error_with_details(e, "Failed to import config")
 
@@ -831,6 +886,7 @@ def show_results_screen():
     st.title("Results")
 
     results_state = state.get_results_state()
+    assignment_state = state.get_assignment_state()
 
     if not results_state.artifacts:
         st.warning("No results available. Please run the matching pipeline first.")
@@ -841,7 +897,7 @@ def show_results_screen():
     # A) Summary cards
     st.subheader("Summary")
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
         st.metric("ESN Members", len(artifacts.esn_df))
@@ -854,6 +910,9 @@ def show_results_screen():
 
     with col4:
         st.metric("Top K", artifacts.config.get("matching", {}).get("top_k", 10))
+
+    with col5:
+        st.metric("Assignments", assignment_state.get_assignment_count())
 
     st.markdown("---")
 
@@ -882,9 +941,13 @@ def show_results_screen():
     st.subheader("Ranked Matches")
 
     matches_data = []
+    assigned_indices = assignment_state.get_assigned_erasmus_indices()
 
     for rank_num, candidate in enumerate(ranking.candidates, start=1):
         student_row = artifacts.erasmus_df.iloc[candidate.erasmus_index]
+
+        # Check if this student is already assigned
+        is_assigned = candidate.erasmus_index in assigned_indices
 
         # Compute accurate comparison stats
         esn_vector = artifacts.esn_vectors[esn_idx]
@@ -904,10 +967,12 @@ def show_results_screen():
             "Rank": rank_num,
             "Name": student_row.get("Name", ""),
             "Surname": student_row.get("Surname", ""),
+            "Status": "ASSIGNED" if is_assigned else "Available",
             "Contact": contact_value,
             "Compared Questions": compared_count,
             "Same Answers": same_count,
             "Different Answers": diff_count,
+            "_erasmus_index": candidate.erasmus_index,  # Hidden field for assignment logic
         }
 
         # Add extra fields if configured
@@ -922,10 +987,72 @@ def show_results_screen():
         matches_data.append(match_row)
 
     matches_df = pd.DataFrame(matches_data)
-    st.dataframe(matches_df, use_container_width=True, hide_index=True)
+
+    # Display table without the hidden _erasmus_index column
+    display_df = matches_df.drop(columns=["_erasmus_index"])
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+    # C1) Manual Assignment Section
+    st.markdown("---")
+    st.subheader("Manual Assignment")
+
+    # Get available students (not already assigned)
+    available_matches = [m for m in matches_data if m["Status"] == "Available"]
+
+    if available_matches:
+        col_assign1, col_assign2 = st.columns([3, 1])
+
+        with col_assign1:
+            # Create selection options
+            selection_options = [
+                f"Rank {m['Rank']}: {m['Name']} {m['Surname']}"
+                for m in available_matches
+            ]
+
+            selected_option = st.selectbox(
+                "Select a student to assign",
+                selection_options,
+                key=f"assign_select_{esn_idx}"
+            )
+
+            # Find the selected match
+            selected_rank = int(selected_option.split(":")[0].replace("Rank ", ""))
+            selected_match = next(m for m in available_matches if m['Rank'] == selected_rank)
+
+        with col_assign2:
+            st.write("")  # Spacing
+            st.write("")  # Spacing
+            assign_button = st.button(
+                "Assign to this ESN member",
+                key=f"assign_btn_{esn_idx}",
+                type="primary"
+            )
+
+        if assign_button:
+            try:
+                # Create assignment
+                assignment_state.add_assignment(
+                    esn_index=esn_idx,
+                    erasmus_index=selected_match["_erasmus_index"],
+                    esn_name=esn_row.get("Name", ""),
+                    esn_surname=esn_row.get("Surname", ""),
+                    erasmus_name=selected_match["Name"],
+                    erasmus_surname=selected_match["Surname"]
+                )
+
+                st.success(
+                    f"Student {selected_match['Name']} {selected_match['Surname']} "
+                    f"assigned to ESN member {selected_name}."
+                )
+                st.rerun()
+
+            except ValueError as e:
+                st.error(str(e))
+    else:
+        st.info("All students in the ranking are already assigned.")
 
     # Download button for this ESN member
-    csv = matches_df.to_csv(index=False).encode('utf-8')
+    csv = display_df.to_csv(index=False).encode('utf-8')
     st.download_button(
         label=f"Download matches for {selected_name} as CSV",
         data=csv,
@@ -956,178 +1083,3 @@ def show_match_details(artifacts: PipelineArtifacts, esn_idx: int, candidate):
 
     esn_vector = artifacts.esn_vectors[esn_idx]
     student_vector = artifacts.erasmus_vectors[candidate.erasmus_index]
-
-    st.write(f"**ESN Member:** {esn_row.get('Name', '')} {esn_row.get('Surname', '')}")
-    st.write(f"**Student:** {student_row.get('Name', '')} {student_row.get('Surname', '')}")
-
-    # Build comparison table
-    comparison_data = []
-
-    for i, question in enumerate(artifacts.question_columns):
-        esn_val = esn_vector[i]
-        student_val = student_vector[i]
-
-        # Skip if either is NaN
-        if pd.isna(esn_val) or pd.isna(student_val):
-            continue
-
-        esn_answer = "A" if esn_val == 0.0 else "B"
-        student_answer = "A" if student_val == 0.0 else "B"
-        match_status = "✓ Same" if esn_answer == student_answer else "✗ Different"
-
-        comparison_data.append({
-            "Question": question[:60] + "..." if len(question) > 60 else question,
-            "ESN Answer": esn_answer,
-            "Student Answer": student_answer,
-            "Match": match_status
-        })
-
-    comparison_df = pd.DataFrame(comparison_data)
-
-    # Highlight differences
-    def highlight_diff(row):
-        if row["Match"] == "✗ Different":
-            return ['background-color: #ffcccc'] * len(row)
-        return [''] * len(row)
-
-    styled_df = comparison_df.style.apply(highlight_diff, axis=1)
-
-    st.dataframe(styled_df, use_container_width=True, hide_index=True)
-
-
-def show_export_screen():
-    """Screen 5: Export results."""
-    st.title("Export Results")
-
-    results_state = state.get_results_state()
-
-    if not results_state.artifacts:
-        st.warning("No results available. Please run the matching pipeline first.")
-        return
-
-    artifacts = results_state.artifacts
-
-    # A) Download Excel
-    st.subheader("Download Excel Workbook")
-
-    st.write("The generated Excel file includes:")
-    st.write("- Summary sheet with run statistics")
-    st.write("- Per-ESN-member sheets with ranked matches")
-
-    output_path = artifacts.output_path
-
-    if output_path.exists():
-        with open(output_path, "rb") as f:
-            excel_bytes = f.read()
-
-        file_size = len(excel_bytes) / 1024  # KB
-        st.info(f"File: {output_path.name} ({file_size:.1f} KB)")
-
-        st.download_button(
-            label="Download Excel Workbook",
-            data=excel_bytes,
-            file_name=output_path.name,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            type="primary"
-        )
-    else:
-        st.error("Output file not found.")
-
-    st.markdown("---")
-
-    # B) Consolidated CSV
-    st.subheader("Download Consolidated CSV")
-
-    st.write("Export all matches as a single CSV file.")
-
-    if st.button("Generate Consolidated CSV", key="generate_csv"):
-        try:
-            csv_data = generate_consolidated_csv(artifacts)
-
-            st.download_button(
-                label="Download Consolidated CSV",
-                data=csv_data,
-                file_name=f"consolidated_matches_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv"
-            )
-        except Exception as e:
-            components.show_error_with_details(e, "Failed to generate CSV")
-
-
-def generate_consolidated_csv(artifacts: PipelineArtifacts) -> bytes:
-    """Generate a consolidated CSV with all matches."""
-    rows = []
-
-    for ranking in artifacts.rankings:
-        esn_row = artifacts.esn_df.iloc[ranking.esn_index]
-        esn_name = esn_row.get("Name", "")
-        esn_surname = esn_row.get("Surname", "")
-
-        esn_vector = artifacts.esn_vectors[ranking.esn_index]
-
-        for rank_num, candidate in enumerate(ranking.candidates, start=1):
-            student_row = artifacts.erasmus_df.iloc[candidate.erasmus_index]
-            student_vector = artifacts.erasmus_vectors[candidate.erasmus_index]
-
-            compared_count, same_count, diff_count = compute_comparison_stats(
-                esn_vector,
-                student_vector,
-                candidate.distance
-            )
-
-            contact_col = components.autodetect_contact_column(list(artifacts.erasmus_df.columns))
-            contact_value = student_row.get(contact_col, "") if contact_col else ""
-
-            rows.append({
-                "ESN_Name": esn_name,
-                "ESN_Surname": esn_surname,
-                "Rank": rank_num,
-                "Student_Name": student_row.get("Name", ""),
-                "Student_Surname": student_row.get("Surname", ""),
-                "Contact": contact_value,
-                "Compared_Questions": compared_count,
-                "Same_Answers": same_count,
-                "Different_Answers": diff_count,
-            })
-
-    df = pd.DataFrame(rows)
-    return df.to_csv(index=False).encode('utf-8')
-
-
-def show_logs_screen():
-    """Screen 6: Logs and run history."""
-    st.title("Logs and Run History")
-
-    # Current run logs
-    st.subheader("Current Run Logs")
-
-    if st.session_state.run_logs:
-        for log in st.session_state.run_logs:
-            level = log.get("level", "INFO")
-            message = log.get("message", "")
-
-            if level == "ERROR":
-                st.error(message)
-            elif level == "WARNING":
-                st.warning(message)
-            elif level == "SUCCESS":
-                st.success(message)
-            else:
-                st.info(message)
-    else:
-        st.info("No logs available. Run the pipeline to see logs.")
-
-    st.markdown("---")
-
-    # Run history
-    st.subheader("Run History")
-
-    if st.session_state.run_history:
-        history_df = pd.DataFrame(st.session_state.run_history)
-        st.dataframe(history_df, use_container_width=True, hide_index=True)
-    else:
-        st.info("No run history available.")
-
-
-if __name__ == "__main__":
-    main()

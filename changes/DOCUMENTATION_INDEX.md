@@ -1,10 +1,56 @@
-# 📖 Documentation Index - GUI Fixes
+# 📖 Documentation Index - GUI Fixes & Manual Assignment Feature
 
 ## 🎯 Start Here
 
-**New user?** Start with: **FINAL_SUMMARY.md** (comprehensive overview)
+**New user?** Start with: **IMPLEMENTATION_COMPLETE.md** (latest features + overview)
 
 **Quick test?** Go to: **QUICK_REFERENCE.md** (1-page summary)
+
+**Manual assignment?** See: **MANUAL_ASSIGNMENT_GUIDE.md** (user guide)
+
+---
+
+## 🆕 Latest: Manual Assignment Feature (2026-02-03)
+
+### For Users
+1. **MANUAL_ASSIGNMENT_GUIDE.md** ⭐ USER GUIDE
+   - How to assign buddies manually
+   - Step-by-step instructions
+   - Export assignments
+   - Troubleshooting
+   - ~5 min read
+
+### For Developers
+1. **IMPLEMENTATION_COMPLETE.md** ⭐ EXECUTIVE SUMMARY
+   - Feature overview
+   - What was delivered
+   - File changes summary
+   - Quality metrics
+   - Deployment status
+   - ~8 min read
+
+2. **MANUAL_ASSIGNMENT_FEATURE.md** ⭐ TECHNICAL DOCS
+   - Complete implementation details
+   - Architecture design
+   - API reference
+   - Testing information
+   - Code examples
+   - ~15 min read
+
+3. **ASSIGNMENT_ARCHITECTURE.md**
+   - Architecture diagrams
+   - Data flow diagrams
+   - Component interactions
+   - State lifecycle
+   - UI component tree
+   - ~10 min read
+
+4. **ASSIGNMENT_VERIFICATION.md**
+   - Complete verification checklist
+   - Test results
+   - Quality assurance
+   - Deployment readiness
+   - ~8 min read
 
 ---
 
@@ -25,19 +71,25 @@
    - Best practices
    - ~10 min read
 
-3. **QUICK_TEST_TIMESTAMP_FILTER.md**
+3. **MANUAL_ASSIGNMENT_GUIDE.md** ⭐ NEW
+   - Manual assignment instructions
+   - Export buddy pairs
+   - Best practices
+   - ~5 min read
+
+4. **QUICK_TEST_TIMESTAMP_FILTER.md**
    - 5-minute timestamp filter test
    - Visual indicators of success
    - Troubleshooting
    - ~5 min read
 
-4. **VERIFICATION_GUIDE.md**
+5. **VERIFICATION_GUIDE.md**
    - How to verify state persistence
    - Step-by-step verification
    - What to expect
    - ~5 min read
 
-5. **readme.md** (Updated)
+6. **readme.md** (Updated)
    - Main project documentation
    - Installation instructions
    - Configuration guide
