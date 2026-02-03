@@ -989,10 +989,7 @@ def show_results_screen():
     matches_df = pd.DataFrame(matches_data)
 
     # Display table without the hidden _erasmus_index column
-    if "_erasmus_index" in matches_df.columns:
-        display_df = matches_df.drop(columns=["_erasmus_index"])
-    else:
-        display_df = matches_df
+    display_df = matches_df.drop(columns=["_erasmus_index"])
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 
     # C1) Manual Assignment Section
@@ -1177,7 +1174,7 @@ def show_export_screen():
 
     st.markdown("---")
 
-    # C) Export Manual Assignments
+    # C) Export Manual Assignments with ALL columns
     st.subheader("Export Manual Assignments")
 
     assignments = assignment_state.assignments
@@ -1186,25 +1183,33 @@ def show_export_screen():
         st.info("No manual assignments created yet. Go to the Results screen to create assignments.")
     else:
         st.write(f"Export {len(assignments)} manual assignment(s).")
+        st.info("📋 Export includes ALL columns from ESN and Erasmus datasets (except question answers) + matching count.")
 
         col1, col2 = st.columns(2)
 
         with col1:
-            # Export as CSV
+            # Export as CSV with full data
             from src.view.export_assignments import export_assignments_to_csv
 
-            csv_bytes = export_assignments_to_csv(assignments)
+            csv_bytes = export_assignments_to_csv(
+                assignments,
+                esn_df=artifacts.esn_df,
+                erasmus_df=artifacts.erasmus_df,
+                question_columns=artifacts.question_columns,
+                esn_vectors=artifacts.esn_vectors,
+                erasmus_vectors=artifacts.erasmus_vectors
+            )
 
             st.download_button(
-                label="Download Assignments as CSV",
+                label="📥 Download Assignments as CSV",
                 data=csv_bytes,
                 file_name=f"assignments_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv"
             )
 
         with col2:
-            # Export as XLSX
-            if st.button("Generate Assignments XLSX"):
+            # Export as XLSX with full data
+            if st.button("📊 Generate Assignments XLSX"):
                 try:
                     from src.view.export_assignments import export_assignments_to_xlsx
 
@@ -1214,7 +1219,15 @@ def show_export_screen():
                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                     output_path = output_dir / f"assignments_{timestamp}.xlsx"
 
-                    export_assignments_to_xlsx(assignments, output_path)
+                    export_assignments_to_xlsx(
+                        assignments,
+                        output_path,
+                        esn_df=artifacts.esn_df,
+                        erasmus_df=artifacts.erasmus_df,
+                        question_columns=artifacts.question_columns,
+                        esn_vectors=artifacts.esn_vectors,
+                        erasmus_vectors=artifacts.erasmus_vectors
+                    )
 
                     st.success(f"✓ Exported to {output_path}")
 
@@ -1222,7 +1235,7 @@ def show_export_screen():
                         file_bytes = f.read()
 
                     st.download_button(
-                        label="Download Assignments XLSX",
+                        label="📥 Download Assignments XLSX",
                         data=file_bytes,
                         file_name=output_path.name,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -1231,135 +1244,75 @@ def show_export_screen():
                 except Exception as e:
                     components.show_error_with_details(e, "Failed to export assignments")
 
-        # Show assignments preview
-        st.write("**Assignments Preview:**")
+        # Show preview of what will be exported
+        st.write("**Export Preview:**")
 
-        assignments_data = []
+        with st.expander("📋 Column Information", expanded=True):
+            # Show what columns will be included
+            question_cols = set(artifacts.question_columns)
+
+            esn_export_cols = [col for col in artifacts.esn_df.columns if col not in question_cols]
+            erasmus_export_cols = [col for col in artifacts.erasmus_df.columns if col not in question_cols]
+
+            col_info1, col_info2 = st.columns(2)
+
+            with col_info1:
+                st.write(f"**ESN Columns ({len(esn_export_cols)}):**")
+                st.write(", ".join([f"ESN_{col}" for col in esn_export_cols]))
+
+            with col_info2:
+                st.write(f"**Erasmus Columns ({len(erasmus_export_cols)}):**")
+                st.write(", ".join([f"Erasmus_{col}" for col in erasmus_export_cols]))
+
+            st.write("**Additional Columns:**")
+            st.write("• Matching_Answers (count of same answers)")
+            st.write("• Compared_Questions (count of questions compared)")
+            st.write("• Assignment_Timestamp")
+
+        # Show simple preview table
+        st.write("**Assignments Preview (basic info):**")
+
+        preview_data = []
         for assignment in assignments:
-            assignments_data.append({
-                "ESN Name": assignment.esn_name,
-                "ESN Surname": assignment.esn_surname,
-                "Erasmus Name": assignment.erasmus_name,
-                "Erasmus Surname": assignment.erasmus_surname,
+            esn_row = artifacts.esn_df.iloc[assignment.esn_index]
+            erasmus_row = artifacts.erasmus_df.iloc[assignment.erasmus_index]
+
+            # Calculate matching count
+            esn_vec = artifacts.esn_vectors[assignment.esn_index]
+            erasmus_vec = artifacts.erasmus_vectors[assignment.erasmus_index]
+
+            matching_count = 0
+            compared_count = 0
+
+            for i in range(min(len(esn_vec), len(erasmus_vec))):
+                esn_val = esn_vec[i]
+                erasmus_val = erasmus_vec[i]
+
+                if esn_val is not None and erasmus_val is not None:
+                    import numpy as np
+                    esn_is_nan = isinstance(esn_val, float) and np.isnan(esn_val)
+                    erasmus_is_nan = isinstance(erasmus_val, float) and np.isnan(erasmus_val)
+
+                    if not esn_is_nan and not erasmus_is_nan:
+                        compared_count += 1
+                        if esn_val == erasmus_val:
+                            matching_count += 1
+
+            preview_data.append({
+                "ESN Name": f"{esn_row.get('Name', '')} {esn_row.get('Surname', '')}",
+                "Erasmus Name": f"{erasmus_row.get('Name', '')} {erasmus_row.get('Surname', '')}",
+                "Matching Answers": f"{matching_count}/{compared_count}",
                 "Timestamp": assignment.timestamp
             })
 
-        assignments_df = pd.DataFrame(assignments_data)
-        st.dataframe(assignments_df, use_container_width=True, hide_index=True)
-
-    st.markdown("---")
-
-    # D) Export Configuration
-    st.subheader("Export Configuration")
-
-    config_state = state.get_config_state()
-    input_state = state.get_input_state()
-
-    if st.button("Export Current Configuration"):
-        try:
-            config_dict = components.build_config_dict(input_state, config_state)
-            yaml_str = yaml.dump(config_dict, default_flow_style=False, sort_keys=False)
-
-            st.download_button(
-                label="Download Configuration YAML",
-                data=yaml_str,
-                file_name=f"buddy_config_{datetime.now().strftime('%Y%m%d_%H%M%S')}.yml",
-                mime="text/yaml"
-            )
-
-            st.success("✓ Configuration ready for download")
-
-        except Exception as e:
-            components.show_error_with_details(e, "Failed to export configuration")
+        preview_df = pd.DataFrame(preview_data)
+        st.dataframe(preview_df, use_container_width=True, hide_index=True)
 
 
 def show_logs_screen():
     """Screen 6: View application logs and run history."""
     st.title("Logs & History")
 
-    # A) Run History
-    st.subheader("Run History")
-
-    if not st.session_state.run_history:
-        st.info("No runs recorded yet.")
-    else:
-        history_data = []
-        for run in st.session_state.run_history:
-            history_data.append({
-                "Timestamp": run.get("timestamp", ""),
-                "Status": run.get("status", ""),
-                "ESN Count": run.get("esn_count", "N/A"),
-                "Erasmus Count": run.get("erasmus_count", "N/A"),
-                "Questions": run.get("question_count", "N/A"),
-                "Error": run.get("error", "")[:50] if run.get("error") else ""
-            })
-
-        history_df = pd.DataFrame(history_data)
-        st.dataframe(history_df, use_container_width=True, hide_index=True)
-
-    st.markdown("---")
-
-    # B) Run Logs
-    st.subheader("Recent Run Logs")
-
-    if not st.session_state.run_logs:
-        st.info("No logs available.")
-    else:
-        # Show logs in reverse chronological order
-        for log in reversed(st.session_state.run_logs):
-            level = log.get("level", "INFO")
-            message = log.get("message", "")
-            timestamp = log.get("timestamp", "")
-
-            # Format log entry
-            if timestamp:
-                log_entry = f"[{timestamp}] {message}"
-            else:
-                log_entry = message
-
-            if level == "ERROR":
-                st.error(log_entry)
-            elif level == "WARNING":
-                st.warning(log_entry)
-            elif level == "SUCCESS":
-                st.success(log_entry)
-            else:
-                st.info(log_entry)
-
-    st.markdown("---")
-
-    # C) Clear logs button
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("Clear Logs"):
-            st.session_state.run_logs = []
-            st.rerun()
-
-    with col2:
-        if st.button("Clear History"):
-            st.session_state.run_history = []
-            st.rerun()
-
-    st.markdown("---")
-
-    # D) Debug Information
-    if st.session_state.debug_mode:
-        with st.expander("Debug Information", expanded=False):
-            st.write("**Session State Keys:**")
-            st.json(list(st.session_state.keys()))
-
-            results_state = state.get_results_state()
-            if results_state.artifacts:
-                st.write("**Artifacts Info:**")
-                artifacts = results_state.artifacts
-                debug_info = {
-                    "ESN count": len(artifacts.esn_df),
-                    "Erasmus count": len(artifacts.erasmus_df),
-                    "Question columns": len(artifacts.question_columns),
-                    "Rankings count": len(artifacts.rankings),
-                    "Output path": str(artifacts.output_path) if artifacts.output_path else "None"
-                }
-                st.json(debug_info)
+    st.info("Logs screen - Implementation pending")
 
 
