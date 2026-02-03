@@ -989,7 +989,10 @@ def show_results_screen():
     matches_df = pd.DataFrame(matches_data)
 
     # Display table without the hidden _erasmus_index column
-    display_df = matches_df.drop(columns=["_erasmus_index"])
+    if "_erasmus_index" in matches_df.columns:
+        display_df = matches_df.drop(columns=["_erasmus_index"])
+    else:
+        display_df = matches_df
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 
     # C1) Manual Assignment Section
@@ -1083,3 +1086,44 @@ def show_match_details(artifacts: PipelineArtifacts, esn_idx: int, candidate):
 
     esn_vector = artifacts.esn_vectors[esn_idx]
     student_vector = artifacts.erasmus_vectors[candidate.erasmus_index]
+
+    # Display student information
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write("**ESN Member:**")
+        st.write(f"Name: {esn_row.get('Name', '')} {esn_row.get('Surname', '')}")
+    with col2:
+        st.write("**Erasmus Student:**")
+        st.write(f"Name: {student_row.get('Name', '')} {student_row.get('Surname', '')}")
+
+    st.markdown("---")
+
+    # Show question-by-question comparison
+    st.write("**Question-by-Question Comparison:**")
+
+    comparison_data = []
+    for i, question_col in enumerate(artifacts.question_columns):
+        esn_answer = esn_row.get(question_col, "")
+        student_answer = student_row.get(question_col, "")
+
+        # Determine if answers match
+        esn_vec_val = esn_vector[i] if i < len(esn_vector) else None
+        student_vec_val = student_vector[i] if i < len(student_vector) else None
+
+        if esn_vec_val is None or student_vec_val is None:
+            match_status = "N/A"
+        elif esn_vec_val == student_vec_val:
+            match_status = "✓ Match"
+        else:
+            match_status = "✗ Different"
+
+        comparison_data.append({
+            "Question": question_col,
+            "ESN Answer": str(esn_answer) if pd.notna(esn_answer) else "",
+            "Erasmus Answer": str(student_answer) if pd.notna(student_answer) else "",
+            "Status": match_status
+        })
+
+    comparison_df = pd.DataFrame(comparison_data)
+    st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+
